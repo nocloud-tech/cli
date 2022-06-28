@@ -3,12 +3,14 @@
   "version": "0.1.0",
   "description": "Command-line interface code.",
   "main": "dist/lib/index.js",
+  "types": "dist/lib/index.d.ts",
   "author": "Michael Ainsworth",
   "license": "UNLICENSED",
   "scripts": {
-    "build-watch": "npx tsc --watch",
     "build": "npx tsc",
-    "prepare": "npm run build"
+    "build-watch": "npx tsc --watch",
+    "prepare": "npm run build",
+    "start": "node -r dotenv/config dist/bin/cli-example.js"
   },
   "devDependencies": {
     "@types/node": "^18.0.0",

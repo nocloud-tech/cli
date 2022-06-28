@@ -32,7 +32,7 @@ export const CreateParameterisedCliFunction = <Parameter>(creator:() => Promise<
     }
 }
 
-export const Run = async(functions:CliFunctionDictionary, action:"throw"|"exit" = "exit") => {
+export const Run = async(functions:CliFunctionDictionary, action:"log"|"throw"|"exit" = "exit") => {
     let command:string|undefined;
 
     try {
@@ -51,8 +51,10 @@ export const Run = async(functions:CliFunctionDictionary, action:"throw"|"exit" 
         await fn(args.slice(1));
     } catch (error:any) {
         const message : string = error.message;
-        if ("throw" === action) {
-            throw new Error(message);
+        if ("log" === action) {
+            console.error(error);
+        } else if ("throw" === action) {
+            throw error;
         } else {
             process.stderr.write(`${message}\n`);
             process.exit(1);
