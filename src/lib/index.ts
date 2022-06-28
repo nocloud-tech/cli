@@ -4,6 +4,27 @@ export type CliFunctionDictionary = {[key:string]:CliFunction};
 
 export type ParameterisedCliFunction = <Parameter>(parameter:Parameter, args:string[]) => Promise<void>
 
+export const CreateEmptyCliFunction = (fn:() => Promise<void>) : CliFunction => {
+    return async(args:string[]) => {
+        if (args.length) {
+            throw new Error(`No arguments required.`);
+        }
+
+        return await fn();
+    }
+}
+
+export const CreateEmptyParameterisedCliFunction = <Parameter>(creator:() => Promise<Parameter>, fn:(p:Parameter) => Promise<void>) : CliFunction => {
+    return async(args:string[]) => {
+        if (args.length) {
+            throw new Error(`No arguments required.`);
+        }
+
+        const p = await creator();
+        return await fn(p);
+    }
+}
+
 export const CreateParameterisedCliFunction = <Parameter>(creator:() => Promise<Parameter>, fn:(parameter:Parameter, args:string[]) => Promise<void>) : CliFunction => {
     return async (args:string[]) => {
         const p = await creator();
