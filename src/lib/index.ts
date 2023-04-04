@@ -32,8 +32,22 @@ export const CreateParameterisedCliFunction = <Parameter>(creator:() => Promise<
     }
 }
 
-export const Run = async(functions:CliFunctionDictionary, action:"log"|"throw"|"exit" = "exit") => {
+export type RunOptions = {
+    help?: string,
+    functions: CliFunctionDictionary,
+    action?: "log"|"throw"|"exit"
+}
+
+export const Run = async(options:RunOptions) => {
+    const { help, functions, action } = options;
+
     let command:string|undefined;
+
+    if (help && help.length) {
+        functions.help = async(args:string[]) => {
+            process.stdout.write(`${help}\n`);
+        }
+    }
 
     try {
         const args = process.argv.slice(2);

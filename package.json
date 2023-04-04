@@ -1,5 +1,5 @@
 {
-  "name": "@cbs/cli",
+  "name": "@nocloud/cli",
   "version": "0.1.0",
   "description": "Command-line interface code.",
   "main": "dist/lib/index.js",
