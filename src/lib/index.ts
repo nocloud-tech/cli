@@ -43,8 +43,15 @@ export const Run = async(options:RunOptions) => {
 
     let command:string|undefined;
 
-    if (help && help.length) {
+    if ("undefined" != typeof help) {
+        if ("undefined" != typeof functions.help) {
+            throw new Error("A 'help' command was already provided.")
+        }
+
         functions.help = async(args:string[]) => {
+            if (args.length) {
+                throw new Error("The 'help' command does not take additional arguments.");
+            }
             process.stdout.write(`${help}\n`);
         }
     }
