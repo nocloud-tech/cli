@@ -1,87 +1,3 @@
-export type CliFunction = (args:string[]) => Promise<void>;
-
-export type CliFunctionDictionary = {[key:string]:CliFunction};
-
-export type ParameterisedCliFunction = <Parameter>(parameter:Parameter, args:string[]) => Promise<void>
-
-export const CreateEmptyCliFunction = (fn:() => Promise<void>) : CliFunction => {
-    return async(args:string[]) => {
-        if (args.length) {
-            throw new Error(`No arguments required.`);
-        }
-
-        return await fn();
-    }
-}
-
-export const CreateEmptyParameterisedCliFunction = <Parameter>(creator:() => Promise<Parameter>, fn:(p:Parameter) => Promise<void>) : CliFunction => {
-    return async(args:string[]) => {
-        if (args.length) {
-            throw new Error(`No arguments required.`);
-        }
-
-        const p = await creator();
-        return await fn(p);
-    }
-}
-
-export const CreateParameterisedCliFunction = <Parameter>(creator:() => Promise<Parameter>, fn:(parameter:Parameter, args:string[]) => Promise<void>) : CliFunction => {
-    return async (args:string[]) => {
-        const p = await creator();
-        return await fn(p, args);
-    }
-}
-
-export type RunOptions = {
-    help?: string,
-    functions: CliFunctionDictionary,
-    action?: "log"|"throw"|"exit"
-}
-
-export const Run = async(options:RunOptions) => {
-    const { help, functions, action } = options;
-
-    let command:string|undefined;
-
-    if ("undefined" != typeof help) {
-        if ("undefined" != typeof functions.help) {
-            throw new Error("A 'help' command was already provided.")
-        }
-
-        functions.help = async(args:string[]) => {
-            if (args.length) {
-                throw new Error("The 'help' command does not take additional arguments.");
-            }
-            process.stdout.write(`${help}\n`);
-        }
-    }
-
-    try {
-        const args = process.argv.slice(2);
-    
-        if (!args.length) {
-            throw new Error(`Missing command.`);
-        }
-    
-        command = args[0];
-        const fn = functions[command];
-    
-        if (!fn) {
-            throw new Error(`Unknown command '${command}'.`);
-        }
-        await fn(args.slice(1));
-    } catch (error:any) {
-        const message : string = error.message;
-        if ("log" === action) {
-            console.error(error);
-        } else if ("throw" === action) {
-            throw error;
-        } else {
-            process.stderr.write(`${message}\n`);
-            process.exit(1);
-        }
-    }
-}
 
 export type BooleanArgument = {
     type: "boolean",
@@ -158,12 +74,12 @@ export const DescribeArguments = (spec:ArgumentSpecification) => {
         } else {
             throw new Error("Unknown type. This is a programming error.")
         }
-        out(")\n");
-        out(`  ${carg.description}\n`)
+        out(")\n\n");
+        out(`  ${carg.description}\n\n`)
     }
 }
 
-export const ProcessArguments = <Result extends {[key:string]:any}>(args:string[], spec:ArgumentSpecification) => {
+export const ProcessArguments = (args:string[], spec:ArgumentSpecification) => {
     let result : {[key:string]:any} = {};
     const cargs = Object.keys(spec)
 
@@ -246,5 +162,173 @@ export const ProcessArguments = <Result extends {[key:string]:any}>(args:string[
         }
     }
 
-    return <Result>result;
+    return result;
+}
+
+export type Callback = (args:any) => Promise<void>
+
+export type CallbackCommand = {
+    type: "callback",
+    callback: Callback,
+    arguments?: ArgumentSpecification
+}
+
+export type SubcommandsCommand = {
+    type: "subcommands",
+    subcommands: CommandSpecification,
+}
+
+export type GenericCommand = {
+    description: string,
+}
+
+export type Command = GenericCommand & (CallbackCommand|SubcommandsCommand);
+
+export type CommandSpecification = {[key:string]:Command};
+
+export type ParameterisedCommand = <Parameter>(parameter:Parameter, args:any) => Promise<void>
+
+export const CreateParameterisedCommand = <Parameter>(creator:() => Promise<Parameter>, fn:(parameter:Parameter, args:any) => Promise<void>) => {
+    return async (args:any) => {
+        const p = await creator();
+        return await fn(p, args);
+    }
+}
+
+const DescribeCommand = (command:Command) => {
+    const out = (s:string) => process.stdout.write(s);
+
+    if (command.type == "callback") {
+        out("DESCRIPTION\n\n");
+        out(`${command.description}\n\n`);
+        if (command.arguments) {
+            out("ARGUMENTS\n\n");
+            DescribeArguments(command.arguments);
+        }
+    } else if (command.type == "subcommands") {
+        out("DESCRIPTION\n\n");
+        out(`${command.description}\n\n`);
+        out("COMMANDS\n\n");
+        const keys = Object.keys(command.subcommands).sort();
+        for (let i = 0; i < keys.length; ++i) {
+            const s = keys[i];
+            out(`  ${s}\n`);
+        }
+        out("\n");
+    }
+}
+
+export type RunOptions = {
+    description: string,
+    commands: CommandSpecification,
+    action?: "log"|"throw"|"exit"
+}
+
+const DoRun = async(args:string[], commands:CommandSpecification, depth = 0) => {
+    const commandDepth = depth ? "subcommand" : "command";
+
+    if (!args.length) {
+        throw new Error(`Missing ${commandDepth}. Use 'help'.`);
+    }
+
+    const cmd = commands[args[0]];
+
+    if (!cmd) {
+        throw new Error(`Unknown command '${args[0]}'. Use 'help'.`);
+    }
+
+    const newArgs = args.slice(1);
+
+    if (cmd.type == "callback") {
+        const cargs = ProcessArguments(newArgs, cmd.arguments || {});
+        await cmd.callback(cargs);
+    } else if (cmd.type == "subcommands") {
+        await DoRun(newArgs, cmd.subcommands);
+    } else {
+        throw new Error("Unknown command type. This is a programming error.");
+    }
+}
+
+type HelpArguments = {
+    command?: string,
+}
+
+export const Run = async(options:RunOptions) => {
+    const { description, commands, action } = options;
+
+    // TODO: Each command structure needs arguments.
+    if (!commands.help) {
+        commands.help = {
+            description: "Display help information.",
+            type: "callback",
+            arguments: {
+                command: {
+                    short: "-c",
+                    long: "--command",
+                    required: false,
+                    description: [
+                        `The command for which help information should be displayed.`,
+                        `You can specificy nested commands with dot-separators. For example,`,
+                        `'<COMMAND>.<SUBCOMMAND>'.`
+                    ].join(" "),
+                    type: "string",
+                }
+            },
+            callback: async(args:HelpArguments) => {
+                let program : Command = {
+                    description: [
+                        `${description}\n\n` +
+                        "These are the top-level commands available.",
+                        "Use '--command <COMMAND>' to get further help on a particular command.",
+                        "Subcommands work the same way, e.g., '--command <COMAMND>.<SUBCOMMAND>'."
+                    ].join(" "),
+                    type: "subcommands",
+                    subcommands: commands,
+                };
+
+                if (!args.command) {
+                    DescribeCommand(program)
+                } else {
+                    // TODO: Finish this    
+                    const parts = args.command.split(".");
+                    let parent : Command = program;
+                    let target : Command|undefined;
+                    for (let i = 0; i < parts.length; ++i) {
+                        if (!parent) break;
+
+                        const part = parts[i];
+                        if (parent.type != "subcommands") {
+                            throw new Error(`Invalid command/subcommand.`);
+                        }
+                        
+                        target = parent.subcommands[part];
+                        if (i < parts.length) {
+                            parent = target;
+                        }
+                    }
+
+                    if (!target) {
+                        throw new Error(`Unknown command/subcommand.`);
+                    }
+                    
+                    DescribeCommand(target);
+                }
+            }
+        }
+    }
+
+    try {
+        const args = process.argv.slice(2);
+        await DoRun(args, commands);
+    } catch (error:any) {
+        const message : string = error.message;
+        if ("log" === action) {
+            console.error(error);
+        } else if ("throw" === action) {
+            throw error;
+        } else {
+            process.stderr.write(`${message}\n`);
+            process.exit(1);
+        }
+    }
 }
