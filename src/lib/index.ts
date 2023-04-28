@@ -256,7 +256,6 @@ type HelpArguments = {
 export const Run = async(options:RunOptions) => {
     const { description, commands, action } = options;
 
-    // TODO: Each command structure needs arguments.
     if (!commands.help) {
         commands.help = {
             description: "Display help information.",
@@ -288,8 +287,7 @@ export const Run = async(options:RunOptions) => {
 
                 if (!args.command) {
                     DescribeCommand(program)
-                } else {
-                    // TODO: Finish this    
+                } else { 
                     const parts = args.command.split(".");
                     let parent : Command = program;
                     let target : Command|undefined;
