@@ -1,6 +1,6 @@
 {
   "name": "@nocloud/cli",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Command-line interface code.",
   "main": "dist/lib/index.js",
   "types": "dist/lib/index.d.ts",
@@ -9,7 +9,6 @@
   "scripts": {
     "build": "npx tsc",
     "build-watch": "npx tsc --watch",
-    "prepare": "npm run build",
     "start": "node -r dotenv/config dist/bin/cli-example.js"
   },
   "devDependencies": {
