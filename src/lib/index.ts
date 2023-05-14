@@ -141,7 +141,7 @@ export const ProcessArguments = (args:string[], spec:ArgumentSpecification) => {
     }
 
     for (let k = 0; k < cargs.length; ++k) {
-        const property = cargs[0];
+        const property = cargs[k];
         const carg = spec[property];
         const name = carg.short || carg.long;
 
