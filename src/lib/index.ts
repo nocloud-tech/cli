@@ -13,11 +13,14 @@ export type NumberArgument = {
     }
 }
 
+export type StringCheck = (data:string) => void;
+
 export type StringArgument = {
     type: "string",
     string?: {
         restrict?: string[],
         defaultValue?: string,
+        check?: StringCheck,
     }
 }
 
@@ -131,8 +134,18 @@ export const ProcessArguments = (args:string[], spec:ArgumentSpecification) => {
 
             result[property] = f;
         } else if (carg.type == "string") {
-            if (carg.string && carg.string.restrict && -1 === carg.string.restrict.indexOf(value)) {
-                throw new Error(`The value supplied to the ${arg} argument is not recognised.`);
+            if (carg.string) {
+                if (carg.string.restrict && -1 === carg.string.restrict.indexOf(value)) {
+                    throw new Error(`The value supplied to the ${arg} argument is not recognised.`);
+                }
+
+                if (carg.string.check) {
+                    try {
+                        carg.string.check(value);
+                    } catch (error:any) {
+                        throw new Error(`The value supplied to the ${arg} argument was invalid: ${error.message}`);
+                    }
+                }
             }
             result[property] = value;
         } else {
