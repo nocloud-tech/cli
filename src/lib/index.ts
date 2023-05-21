@@ -15,6 +15,13 @@ export type NumberArgument = {
 
 export type StringCheck = (data:string) => void;
 
+export const checkStringIsDateLike : StringCheck = (data:string) => {
+    const d = new Date(data);
+    if (isNaN(d.getTime())) {
+        throw new Error("Date is invalid.");
+    }
+}
+
 export type StringArgument = {
     type: "string",
     string?: {
