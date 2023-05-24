@@ -1,4 +1,3 @@
-
 export type BooleanArgument = {
     type: "boolean",
     boolean?: {
@@ -341,7 +340,7 @@ export const Run = async(options:RunOptions) => {
     } catch (error:any) {
         const message : string = error.message;
         if ("log" === action) {
-            console.error(error);
+            process.stderr.write(`${message}\n`);
         } else if ("throw" === action) {
             throw error;
         } else {
